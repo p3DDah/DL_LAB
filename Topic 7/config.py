@@ -52,7 +52,7 @@ def configurations():
         help="Temporal Knowledge Graph Dataset"
     )
     parser.add_argument(
-        "--model", default="NaiveTransE", choices=["NaiveTransE", "VectorTransE"], help="Temporal Knowledge Graph Embedding Model"
+        "--model", default="VectorTransE", choices=["NaiveTransE", "VectorTransE"], help="Temporal Knowledge Graph Embedding Model"
     )
     parser.add_argument(
         "--regularizer", default="N3", choices=["N3", "F2"], help="Regularizer"
@@ -67,13 +67,13 @@ def configurations():
         "--max_epochs", default=1000, type=int, help="Maximum number of epochs to train for"
     )
     parser.add_argument(
-        "--patience", default=3, type=int, help="Number of epochs before early stopping"
+        "--patience", default=5, type=int, help="Number of epochs before early stopping"
     )
     parser.add_argument(
-        "--dyn_lr", default=True, type=bool, help="Adjust the learning rate"
+        "--dyn_lr", default=False, type=bool, help="Adjust the learning rate"
     )
     parser.add_argument(
-        "--valid", default=2, type=int, help="Number of epochs before validation"
+        "--valid", default=1, type=int, help="Number of epochs before validation"
     )
     parser.add_argument(
         "--valid_batch", default=1, type=int, help= "Number of validation batches"
@@ -107,7 +107,7 @@ def configurations():
         "--margin", default=1, type=float, help="Margin for distance-based losses"
     )
     parser.add_argument(
-        "--num_save_files", default=20, type=int, help="Decide, how many trainings should be saved"
+        "--num_save_files", default=999999, type=int, help="Decide, how many trainings should be saved"
     )
 
     return parser.parse_args()

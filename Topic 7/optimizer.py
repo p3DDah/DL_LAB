@@ -79,6 +79,8 @@ class TKGE_Optimizer(object):
             predictions, factors = self.model(input_batch, eval_mode=True)
             truth_tail = input_batch[:, 2]
             truth_head = input_batch[:, 0]
+            truth_tail = truth_tail.float()
+            truth_head = truth_head.float()
             loss = self.loss_fn(predictions, truth_tail)
             loss += self.loss_fn(predictions, truth_head)
 

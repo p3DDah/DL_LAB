@@ -8,8 +8,8 @@ def format_metrics(metrics, split):
     result += f"MRR: {metrics['MRR'].item():.3f} | "
     result += f"H10: {metrics['HITS10']:.3f} | "
     result += f"H3: {metrics['HITS3']:.3f} | "
-    result += f"H1: {metrics['HITS1']:.3f}|"
-    result += f"MRR_RAW: {metrics['MRR_RAW'].item():.3f} | "
+    result += f"H1: {metrics['HITS1']:.3f} |"
+    result += f"MRR_XX: {metrics['MRR_XX'].item():.3f}"
     return result
 
 def plotter(x, name, model_name, _save, _show, save_dir):

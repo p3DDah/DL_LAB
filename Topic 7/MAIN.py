@@ -8,6 +8,8 @@ import numpy as np
 import sys
 import logging
 import itertools
+import shutil
+import tqdm
 from matplotlib import pyplot as plt
 from datetime import datetime
 import torch.cuda as cuda
@@ -28,25 +30,9 @@ from optimizer import *
 from regularizers import *
 
 
-# TODO: filters might be wrong initialized
-# TODO: adjust arrays so that we have dynamic lrs, batches, optimizers
-# TODO: plot with different learning rates
-# TODO: more regularizer -> "N3", "F2"
-# TODO: another file for savings
-
-# TODO: try?
-#  different Embedding sizes
-#  different optimizer
-#  different init sizes
-#  different regularizer values
-#  different learning rates, dynamic learning rates
-#  different margin
-
-# TODO: Implement?
-#  ->
-def train(args):
+def train(args, benchmark):
     cuda.empty_cache()
-
+    tqdm.disable = args.debug
     with cuda.device(0):
         allocated = cuda.memory_allocated()
         reserved = cuda.memory_reserved()
@@ -59,7 +45,16 @@ def train(args):
         F2 = F2
         N3 = N3
 
-    save_dir = get_savedir(args.model, args.dataset, args.num_save_files)
+    if benchmark:
+        number = 1
+        while True:
+            save_dir = os.path.join("savings/Files",f"ModelCombination_{str(number).zfill(4)}")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+                break
+            number += 1
+    else:
+        save_dir = get_savedir(args.model, args.dataset, args.num_save_files)
 
     # file logger
     logging.basicConfig(
@@ -107,8 +102,9 @@ def train(args):
 
     if os.path.exists(os.path.join("savings", "all_quadruple_rank_t.pth")) and \
         os.path.exists(os.path.join("savings", "all_quadruple_rank_h.pth")) and \
-            os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_t.pth")) and \
-            os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_h.pth")):
+        os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_t.pth")) and \
+        os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_h.pth")) and \
+        not benchmark:
             all_quadruple_rank_t = torch.load("savings/all_quadruple_rank_t.pth")
             all_quadruple_rank_h = torch.load("savings/all_quadruple_rank_h.pth")
             all_quadruple_rank_raw_t = torch.load("savings/all_quadruple_rank_raw_t.pth")
@@ -173,7 +169,8 @@ def train(args):
         best_epoch = None
         train_total_loss, train_mean_loss = [], []
         mr, mrr, hits10, hits3, hits1 = [], [], [], [], []
-        mr_raw, mrr_raw, hits10_raw, hits3_raw, hits1_raw = [], [], [], [], []
+        mr_xxx, mrr_xxx, hits10_xxx, hits3_xxx, hits1_xxx = [], [], [], [], []
+        mr_xx, mrr_xx, hits10_xx, hits3_xx, hits1_xx = [], [], [], [], []
 
         for step in range(args.max_epochs):
             # Train step
@@ -200,13 +197,19 @@ def train(args):
                 hits3.append(metrics["HITS3"])
                 hits1.append(metrics["HITS1"])
 
-                mr_raw.append(metrics["MR_RAW"])
-                mrr_raw.append(metrics["MRR_RAW"])
-                hits10_raw.append(metrics["HITS10"])
-                hits3_raw.append(metrics["HITS3"])
-                hits1_raw.append(metrics["HITS1"])
+                mr_xxx.append(metrics["MR_XXX"])
+                mrr_xxx.append(metrics["MRR_XXX"])
+                hits10_xxx.append(metrics["HITS10_XXX"])
+                hits3_xxx.append(metrics["HITS3_XXX"])
+                hits1_xxx.append(metrics["HITS1_XXX"])
 
-                valid_mrr = metrics["MRR"]
+                mr_xx.append(metrics["MR_XX"])
+                mrr_xx.append(metrics["MRR_XX"])
+                hits10_xx.append(metrics["HITS10_XX"])
+                hits3_xx.append(metrics["HITS3_XX"])
+                hits1_xx.append(metrics["HITS1_XX"])
+
+                valid_mrr = metrics["MRR_XX"]
                 if not best_mrr or valid_mrr > best_mrr:
                     best_mrr = valid_mrr
                     early_stopping_counter = 0
@@ -250,16 +253,27 @@ def train(args):
             with open(os.path.join(save_dir, args.model) + "_hits1", "wb") as fp:
                 pkl.dump(hits1, fp)
 
-            with open(os.path.join(save_dir, args.model) + "_mr_raw", "wb") as fp:
-                pkl.dump(mr_raw, fp)
-            with open(os.path.join(save_dir, args.model) + "_mrr_raw", "wb") as fp:
-                pkl.dump(mrr_raw, fp)
-            with open(os.path.join(save_dir, args.model) + "_hits10_raw", "wb") as fp:
-                pkl.dump(hits10_raw, fp)
-            with open(os.path.join(save_dir, args.model) + "_hits3_raw", "wb") as fp:
-                pkl.dump(hits3_raw, fp)
-            with open(os.path.join(save_dir, args.model) + "_hits1_raw", "wb") as fp:
-                pkl.dump(hits1_raw, fp)
+            with open(os.path.join(save_dir, args.model) + "_mr_xxx", "wb") as fp:
+                pkl.dump(mr_xxx, fp)
+            with open(os.path.join(save_dir, args.model) + "_mrr_xxx", "wb") as fp:
+                pkl.dump(mrr_xxx, fp)
+            with open(os.path.join(save_dir, args.model) + "_hits10_xxx", "wb") as fp:
+                pkl.dump(hits10_xxx, fp)
+            with open(os.path.join(save_dir, args.model) + "_hits3_xxx", "wb") as fp:
+                pkl.dump(hits3_xxx, fp)
+            with open(os.path.join(save_dir, args.model) + "_hits1_xxx", "wb") as fp:
+                pkl.dump(hits1_xxx, fp)
+
+            with open(os.path.join(save_dir, args.model) + "_mr_xx", "wb") as fp:
+                pkl.dump(mr_xx, fp)
+            with open(os.path.join(save_dir, args.model) + "_mrr_xx", "wb") as fp:
+                pkl.dump(mrr_xx, fp)
+            with open(os.path.join(save_dir, args.model) + "_hits10_xx", "wb") as fp:
+                pkl.dump(hits10_xx, fp)
+            with open(os.path.join(save_dir, args.model) + "_hits3_xx", "wb") as fp:
+                pkl.dump(hits3_xx, fp)
+            with open(os.path.join(save_dir, args.model) + "_hits1_xx", "wb") as fp:
+                pkl.dump(hits1_xx, fp)
 
     # Validation metrics
     if args.eval:
@@ -268,7 +282,7 @@ def train(args):
 
     # Test metrics
     if args.test:
-        metrics = ranking(x_v, model, all_quadruple_rank_t, all_quadruple_rank_h, all_quadruple_rank_raw_t, all_quadruple_rank_raw_h, args.valid_batch)
+        metrics = ranking(x_t, model, all_quadruple_rank_t, all_quadruple_rank_h, all_quadruple_rank_raw_t, all_quadruple_rank_raw_h, args.valid_batch)
         logging.info(format_metrics(metrics, split="test "))
 
     if args.plt:
@@ -296,16 +310,27 @@ def train(args):
         with open(os.path.join(save_dir, args.model) + "_hits1", "rb") as fp:
             hits1 = pkl.load(fp)
 
-        with open(os.path.join(save_dir, args.model) + "_mr_raw", "rb") as fp:
-            mr_raw = pkl.load(fp)
-        with open(os.path.join(save_dir, args.model) + "_mrr_raw", "rb") as fp:
-            mrr_raw = pkl.load(fp)
-        with open(os.path.join(save_dir, args.model) + "_hits10_raw", "rb") as fp:
-            hits10_raw = pkl.load(fp)
-        with open(os.path.join(save_dir, args.model) + "_hits3_raw", "rb") as fp:
-            hits3_raw = pkl.load(fp)
-        with open(os.path.join(save_dir, args.model) + "_hits1_raw", "rb") as fp:
-            hits1_raw = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_mr_xxx", "rb") as fp:
+            mr_xxx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_mrr_xxx", "rb") as fp:
+            mrr_xxx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_hits10_xxx", "rb") as fp:
+            hits10_xxx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_hits3_xxx", "rb") as fp:
+            hits3_xxx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_hits1_xxx", "rb") as fp:
+            hits1_xxx = pkl.load(fp)
+
+        with open(os.path.join(save_dir, args.model) + "_mr_xx", "rb") as fp:
+            mr_xx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_mrr_xx", "rb") as fp:
+            mrr_xx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_hits10_xx", "rb") as fp:
+            hits10_xx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_hits3_xx", "rb") as fp:
+            hits3_xx = pkl.load(fp)
+        with open(os.path.join(save_dir, args.model) + "_hits1_xx", "rb") as fp:
+            hits1_xx = pkl.load(fp)
 
         plotter(torch.tensor(train_total_loss), "Total-Loss", args.model, args.plt_save,
                 args.plt_show, save_dir) if \
@@ -324,18 +349,35 @@ def train(args):
         plotter(torch.tensor(hits1), "Hits1", args.model, args.plt_save, args.plt_show, save_dir) if \
             args.plt_hits1 else None
 
-        plotter(torch.tensor(mr_raw), "MR_RAW", args.model, args.plt_save, args.plt_show, save_dir) if \
+        plotter(torch.tensor(mr_xxx), "MR_XXX", args.model, args.plt_save, args.plt_show, save_dir) if \
             args.plt_mr else None
-        plotter(torch.tensor(mrr_raw), "MRR_Raw", args.model, args.plt_save, args.plt_show, save_dir) if \
+        plotter(torch.tensor(mrr_xxx), "MRR_XXX", args.model, args.plt_save, args.plt_show, save_dir) if \
             args.plt_mrr else None
-        plotter(torch.tensor(hits10_raw), "Hits10_Raw", args.model, args.plt_save, args.plt_show, save_dir) if \
+        plotter(torch.tensor(hits10_xxx), "Hits10_XXX", args.model, args.plt_save, args.plt_show, save_dir) if \
             args.plt_hits10 else None
-        plotter(torch.tensor(hits3_raw), "Hits3_Raw", args.model, args.plt_save, args.plt_show, save_dir) if \
+        plotter(torch.tensor(hits3_xxx), "Hits3_XXX", args.model, args.plt_save, args.plt_show, save_dir) if \
             args.plt_hits3 else None
-        plotter(torch.tensor(hits1_raw), "Hits1_Raw", args.model, args.plt_save, args.plt_show, save_dir) if \
+        plotter(torch.tensor(hits1_xxx), "Hits1_XXX", args.model, args.plt_save, args.plt_show, save_dir) if \
+            args.plt_hits1 else None
+
+        plotter(torch.tensor(mr_xx), "MR_XX", args.model, args.plt_save, args.plt_show, save_dir) if \
+            args.plt_mr else None
+        plotter(torch.tensor(mrr_xx), "MRR_XX", args.model, args.plt_save, args.plt_show, save_dir) if \
+            args.plt_mrr else None
+        plotter(torch.tensor(hits10_xx), "Hits10_XX", args.model, args.plt_save, args.plt_show, save_dir) if \
+            args.plt_hits10 else None
+        plotter(torch.tensor(hits3_xx), "Hits3_XX", args.model, args.plt_save, args.plt_show, save_dir) if \
+            args.plt_hits3 else None
+        plotter(torch.tensor(hits1_xx), "Hits1_XX", args.model, args.plt_save, args.plt_show, save_dir) if \
             args.plt_hits1 else None
 
     #os.system("shutdown.exe /h")
+    for handler in logging.root.handlers[:]:
+        handler.close()
+        logging.root.removeHandler(handler)
+    logging.shutdown()
+
+    return best_mrr, save_dir
 
 def select_directory_dialog():
     app = QApplication([])
@@ -349,29 +391,44 @@ def select_directory_dialog():
 
 if __name__ == "__main__":
     models = ["NaiveTransE", "VectorTransE"]
-    num_lr = [0.01] # [0.001, 0.0001] #TODO: only choose one learning rate
+    num_lr = [0.1, 0.01, 0.001, 0.0001] #TODO: only choose one learning rate
     opt = ["Adagrad", "Adam"]
-    num_reg = [0, 0.1, 0.01]
-    num_neg_samp = [0, 100]
+    num_reg = [0, 0.1, 0.01, 0.001]
+    num_neg_samp = [1, 50, 100, 200]
     ds = ["ICEWS05-15", "ICEWS14"]
-    rank = [10, 50, 100] # rank 100 first
-    batch_size = [1000]
+    rank = [10, 50, 100, 500, 1000] # rank 100 first
+    batch_size = [100, 1000]
 
     parameter_combinations = list(
         itertools.product(models, num_lr, opt, num_reg, num_neg_samp,
                           ds, rank, batch_size))
-    print(len(parameter_combinations)*2)
+    print(len(parameter_combinations))
 
     args = configurations()
-    train(args)
+
+
+    MRR_Ranking = []
+    if os.path.exists("savings/Files"):
+        files = os.listdir("savings/Files")
+        for elem in files:
+            shutil.rmtree(os.path.join("savings/Files", elem))
+    for i, combination in enumerate(parameter_combinations):
+        print(f"Current iteration: {i+1} of {len(parameter_combinations)}")
+        args.model, args.learning_rate, args.optimizer, args.reg, args.neg_sample_size, \
+            args.dataset, args.rank, args.batch_size = combination
+        Best_MRR, name = train(args, True)
+        MRR_Ranking.append([Best_MRR, name, args.model, args.learning_rate, args.optimizer, args.reg, args.neg_sample_size, \
+            args.dataset, args.rank, args.batch_size])
+
+    MRR_Ranking.sort(reverse=True)
+    with open(r'MRR_Ranking.txt', 'w') as fp:
+        for item in MRR_Ranking:
+            fp.write("%s\n" % item)
+
+
+    #tmp = train(args, False)
 
     exit()
 
-    #loss = ["loglikelihoodloss", "marginrankingloss"] # separat nochmal starten
 
 
-
-    for combination in parameter_combinations:
-        args.model, args.learning_rate, args.optimizer, args.reg, args.neg_sample_size, \
-            args.init_size, args.dataset, args.rank, args.batch_size, args.regularizer = combination
-        train(args)

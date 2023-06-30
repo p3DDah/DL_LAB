@@ -1,9 +1,3 @@
-'''
-Created on May 21, 2023
-
-@author: Mojtaba Nayyeri
-'''
-
 from _operator import truediv
 from config import device
 import torch
@@ -14,7 +8,7 @@ import os
 
 
 #expecting 1D np array of predictions and labels.
-def ranking(x, model,all_quadruple_rank_t, all_quadruple_rank_h, filter_rank_raw_t, filter_rank_raw_h,batches):
+def ranking(x, model,filter_rank_t, filter_rank_h, filter_rank_raw_t, filter_rank_raw_h,batches):
 
     head, relation, tail, timestamp= x[:,0], x[:,1], x[:,2], x[:,3]
     length = len(head)
@@ -34,12 +28,19 @@ def ranking(x, model,all_quadruple_rank_t, all_quadruple_rank_h, filter_rank_raw
     hits3 = 0
     hits1 = 0
 
-    total_rank_raw = 0
-    mr_raw = 0
-    mrr_raw = 0
-    hits10_raw = 0
-    hits3_raw = 0
-    hits1_raw = 0
+    total_rank_xxx = 0
+    mr_xxx = 0
+    mrr_xxx = 0
+    hits10_xxx = 0
+    hits3_xxx = 0
+    hits1_xxx = 0
+
+    total_rank_xx = 0
+    mr_xx = 0
+    mrr_xx = 0
+    hits10_xx = 0
+    hits3_xx = 0
+    hits1_xx = 0
 
     with torch.no_grad():
         with tqdm.tqdm(total=batch_size, unit='exec') as bar:
@@ -52,49 +53,52 @@ def ranking(x, model,all_quadruple_rank_t, all_quadruple_rank_h, filter_rank_raw
                 h, r, t, ts = h.type(torch.LongTensor).to(device), r.type(torch.LongTensor).to(device), \
                     t.type(torch.LongTensor).to(device), ts.type(torch.LongTensor).to(device)
 
-                filter_rank_t = all_quadruple_rank_t
-                filter_rank_h = all_quadruple_rank_h
 
+                filter_tail_hrt = filter_rank_t[(head[idx].item(), relation[idx].item(), timestamp[idx].item())]
+                filter_head_trt= filter_rank_h[(relation[idx].item(), tail[idx].item(), timestamp[idx].item())]
 
-                filter_tail = filter_rank_t[(head[idx].item(), relation[idx].item(), timestamp[idx].item())]
-                filter_head = filter_rank_h[(relation[idx].item(), tail[idx].item(), timestamp[idx].item())]
-
-                filter_tail_raw = filter_rank_raw_t[(head[idx].item(), relation[idx].item())]
-                filter_head_raw = filter_rank_raw_h[(relation[idx].item(), tail[idx].item())]
+                filter_tail_hr = filter_rank_raw_t[(head[idx].item(), relation[idx].item())]
+                filter_head_tr = filter_rank_raw_h[(relation[idx].item(), tail[idx].item())]
 
 
                 x = torch.stack((torch.tensor([head[idx]]).to(device), torch.tensor([relation[idx]]).to(device), torch.tensor(
                    [tail[idx]]).to(device), torch.tensor([timestamp[idx]]).to(device)), dim=1)
 
                 Corrupted_score_tail, _ = model(torch.stack((h, r, all_entity, ts), dim=1))
-                Corrupted_score_tail_raw = Corrupted_score_tail.clone()
+                Corrupted_score_tail_hrt = Corrupted_score_tail.clone()
+                Corrupted_score_tail_hr = Corrupted_score_tail.clone()
 
-                indices = torch.cat([tensor.flatten() for tensor in filter_tail])
-                indices_raw = torch.cat([tensor.flatten() for tensor in filter_tail_raw])
+                indices_hrt = torch.cat([tensor.flatten() for tensor in filter_tail_hrt])
+                indices_hr = torch.cat([tensor.flatten() for tensor in filter_tail_hr])
                 mask = torch.ones_like(Corrupted_score_tail).bool()
-                mask[indices] = False
-                Corrupted_score_tail[~mask] = -float('inf')
-                mask[indices_raw] = False
-                Corrupted_score_tail_raw[~mask] = -float('inf')
+                mask[indices_hrt] = False
+                mask[indices_hr] = False
+                Corrupted_score_tail_hrt[~mask] = -float('inf')
+                Corrupted_score_tail_hr[~mask] = -float('inf')
 
 
                 Corrupted_score_head, _ = model(torch.stack((all_entity, r, t, ts), dim=1))
-                Corrupted_score_head_raw = Corrupted_score_head.clone()
+                Corrupted_score_head_trt = Corrupted_score_head.clone()
+                Corrupted_score_head_tr = Corrupted_score_head.clone()
 
-                indices = torch.cat([tensor.flatten() for tensor in filter_head])
+                indices_trt = torch.cat([tensor.flatten() for tensor in filter_head_trt])
+                indices_tr = torch.cat([tensor.flatten() for tensor in filter_head_tr])
                 mask = torch.ones_like(Corrupted_score_head).bool()
-                mask[indices] = False
-                Corrupted_score_head[~mask] = -float('inf')
-                mask[indices_raw] = False
-                Corrupted_score_head_raw[~mask] = -float('inf')
+                mask[indices_trt] = False
+                mask[indices_tr] = False
+                Corrupted_score_head_trt[~mask] = -float('inf')
+                Corrupted_score_head_tr[~mask] = -float('inf')
+
                 Quadruple, _ = model(x)
-                #Quadruple = torch.sub(Quadruple, 1e-5)
 
                 ranking_tail = torch.sum((torch.gt(Corrupted_score_tail, Quadruple)).float()) + 1
                 ranking_head = torch.sum((torch.gt(Corrupted_score_head, Quadruple)).float()) + 1
 
-                ranking_tail_raw = torch.sum((Corrupted_score_tail_raw > Quadruple).float()) + 1
-                ranking_head_raw = torch.sum((Corrupted_score_head_raw > Quadruple).float()) + 1
+                ranking_tail_hrt = torch.sum((Corrupted_score_tail_hrt > Quadruple).float()) + 1
+                ranking_head_trt = torch.sum((Corrupted_score_head_trt > Quadruple).float()) + 1
+
+                ranking_tail_hr = torch.sum((Corrupted_score_tail_hr > Quadruple).float()) + 1
+                ranking_head_tr = torch.sum((Corrupted_score_head_tr > Quadruple).float()) + 1
 
                 avg_rank = (1/ranking_head + 1/ranking_tail) / 2
                 mr += (ranking_head + ranking_tail) / 2
@@ -103,17 +107,25 @@ def ranking(x, model,all_quadruple_rank_t, all_quadruple_rank_h, filter_rank_raw
                 hits3 += 1 if (ranking_head + ranking_tail) / 2 < 4 else 0
                 hits1 += 1 if (ranking_head + ranking_tail) / 2 < 2 else 0
 
-                avg_rank_raw = (1 / ranking_head_raw + 1 / ranking_tail_raw) / 2
-                mr_raw += (ranking_head_raw + ranking_tail_raw) / 2
-                total_rank_raw += avg_rank_raw
-                hits10_raw += 1 if (ranking_head_raw + ranking_tail_raw) / 2 < 11 else 0
-                hits3_raw += 1 if (ranking_head_raw + ranking_tail_raw) / 2 < 4 else 0
-                hits1_raw += 1 if (ranking_head_raw + ranking_tail_raw) / 2 < 2 else 0
+                avg_rank_xxx = (1 / ranking_head_trt + 1 / ranking_tail_hrt) / 2
+                mr_xxx += (ranking_head_trt + ranking_tail_hrt) / 2
+                total_rank_xxx += avg_rank_xxx
+                hits10_xxx += 1 if (ranking_head_trt + ranking_tail_hrt) / 2 < 11 else 0
+                hits3_xxx += 1 if (ranking_head_trt + ranking_tail_hrt) / 2 < 4 else 0
+                hits1_xxx += 1 if (ranking_head_trt + ranking_tail_hrt) / 2 < 2 else 0
+
+                avg_rank_xx = (1 / ranking_head_tr + 1 / ranking_tail_hr) / 2
+                mr_xx += (ranking_head_tr + ranking_tail_hr) / 2
+                total_rank_xx += avg_rank_xx
+                hits10_xx += 1 if (ranking_head_tr + ranking_tail_hr) / 2 < 11 else 0
+                hits3_xx += 1 if (ranking_head_tr + ranking_tail_hr) / 2 < 4 else 0
+                hits1_xx += 1 if (ranking_head_tr + ranking_tail_hr) / 2 < 2 else 0
+
                 bar.update(1)
-                bar.set_postfix(Hits10=f'{hits10}/{batch_size}',
-                                Hits3=f'{hits3}/{batch_size}',
-                                Hits1=f'{hits1}/{batch_size}',
-                                MRR=f'{avg_rank.item():.6f}',
+                bar.set_postfix(Hits10=f'{hits10_xx}/{batch_size}',
+                                Hits3=f'{hits3_xx}/{batch_size}',
+                                Hits1=f'{hits1_xx}/{batch_size}',
+                                MRR=f'{avg_rank_xx.item():.6f}',
                                 MR=f'{(ranking_head + ranking_tail) / 2:.6f}')
             bar.close()
 
@@ -124,13 +136,22 @@ def ranking(x, model,all_quadruple_rank_t, all_quadruple_rank_h, filter_rank_raw
     hits3 = hits3 / batch_size
     hits1 = hits1 / batch_size
 
-    mr_raw = mr_raw / batch_size
-    mrr_raw = total_rank_raw / batch_size
-    tmp_hits10_raw, tmp_hits3_raw, tmp_hits1_raw = hits10_raw, hits3_raw, hits1_raw
-    hits10_raw = hits10_raw / batch_size
-    hits3_raw = hits3_raw / batch_size
-    hits1_raw = hits1_raw / batch_size
+    mr_xxx = mr_xxx / batch_size
+    mrr_xxx = total_rank_xxx / batch_size
+    tmp_hits10_xxx, tmp_hits3_xxx, tmp_hits1_xxx = hits10_xxx, hits3_xxx, hits1_xxx
+    hits10_xxx = hits10_xxx / batch_size
+    hits3_xxx = hits3_xxx / batch_size
+    hits1_xxx = hits1_xxx / batch_size
 
-    return {"MR": mr, "MRR":mrr,"HITS10": hits10,"HITS3": hits3,"HITS1": hits1,"MR_RAW": mr_raw, "MRR_RAW": mrr_raw,"HITS10_RAW": hits10_raw, "HITS3_RAW": hits3_raw,"HITS1_RAW": hits1_raw}
+    mr_xx = mr_xx / batch_size
+    mrr_xx = total_rank_xx / batch_size
+    tmp_hits10_xx, tmp_hits3_xx, tmp_hits1_xx = hits10_xx, hits3_xx, hits1_xx
+    hits10_xx = hits10_xx / batch_size
+    hits3_xx = hits3_xx / batch_size
+    hits1_xx = hits1_xx / batch_size
+
+    return {"MR": mr, "MRR":mrr,"HITS10": hits10,"HITS3": hits3,"HITS1": hits1,
+            "MR_XXX": mr_xxx, "MRR_XXX": mrr_xxx,"HITS10_XXX": hits10_xxx, "HITS3_XXX": hits3_xxx,"HITS1_XXX": hits1_xxx,
+            "MR_XX": mr_xx, "MRR_XX": mrr_xx,"HITS10_XX": hits10_xx, "HITS3_XX": hits3_xx,"HITS1_XX": hits1_xx}
 
 

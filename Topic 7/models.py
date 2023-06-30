@@ -105,13 +105,18 @@ class VectorTransE(BaseE):
     def __init__(self, args):
         super(VectorTransE, self).__init__(args)
 
-        self.embeddings = nn.ModuleList([nn.Embedding(s, self.rank) for s in [sizes[0], sizes[1], sizes[3]]])
+        self.embeddings = nn.ModuleList([nn.Embedding(s, self.rank) for s in [self.sizes[0], self.sizes[1], self.sizes[3]]])
         # entities
         self.embeddings[0].weight.data = self.init_size * torch.randn((self.sizes[0], self.rank))
         # relations
         self.embeddings[1].weight.data = self.init_size * torch.randn((self.sizes[0], self.rank))
         # timestamps
         self.embeddings[2].weight.data = self.init_size * torch.randn((self.sizes[0], self.rank))
+
+        self.bh = nn.Embedding(self.sizes[0], 1)
+        self.bh.weight.data = torch.zeros((self.sizes[0], 1))
+        self.bt = nn.Embedding(self.sizes[0], 1)
+        self.bt.weight.data = torch.zeros((self.sizes[0], 1))
 
     def get_queries(self, x_data, eval_mode=False):
         head_e = self.embeddings[0](x_data[:, 0])
