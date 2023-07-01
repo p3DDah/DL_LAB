@@ -101,7 +101,7 @@ def configurations():
         "--debug", default=True, type= bool, help="Faster processing pipeline"
     )
     parser.add_argument(
-        "--device", default="cuda:0", choices=["cpu", "cuda:0"], help="Device for calculations"
+        "--device", default="cuda:0", help="Device for calculations"
     )
     parser.add_argument(
         "--margin", default=1, type=float, help="Margin for distance-based losses"
