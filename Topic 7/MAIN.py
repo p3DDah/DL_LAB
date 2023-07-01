@@ -103,8 +103,7 @@ def train(args, benchmark):
     if os.path.exists(os.path.join("savings", "all_quadruple_rank_t.pth")) and \
         os.path.exists(os.path.join("savings", "all_quadruple_rank_h.pth")) and \
         os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_t.pth")) and \
-        os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_h.pth")) and \
-        benchmark:
+        os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_h.pth")):
             all_quadruple_rank_t = torch.load("savings/all_quadruple_rank_t.pth")
             all_quadruple_rank_h = torch.load("savings/all_quadruple_rank_h.pth")
             all_quadruple_rank_raw_t = torch.load("savings/all_quadruple_rank_raw_t.pth")
