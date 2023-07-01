@@ -104,7 +104,7 @@ def train(args, benchmark):
         os.path.exists(os.path.join("savings", "all_quadruple_rank_h.pth")) and \
         os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_t.pth")) and \
         os.path.exists(os.path.join("savings", "all_quadruple_rank_raw_h.pth")) and \
-        not benchmark:
+        benchmark:
             all_quadruple_rank_t = torch.load("savings/all_quadruple_rank_t.pth")
             all_quadruple_rank_h = torch.load("savings/all_quadruple_rank_h.pth")
             all_quadruple_rank_raw_t = torch.load("savings/all_quadruple_rank_raw_t.pth")
@@ -395,7 +395,7 @@ if __name__ == "__main__":
     opt = ["Adagrad", "Adam"]
     num_reg = [0, 0.1, 0.01, 0.001]
     num_neg_samp = [1, 50, 100, 200]
-    ds = ["ICEWS05-15", "ICEWS14"]
+    ds = ["ICEWS05-15"] #, "ICEWS14"]
     rank = [10, 50, 100, 500, 1000] # rank 100 first
     batch_size = [100, 1000]
 
