@@ -390,13 +390,13 @@ def select_directory_dialog():
 
 if __name__ == "__main__":
     models = ["NaiveTransE", "VectorTransE"]
-    num_lr = [0.1, 0.01, 0.001, 0.0001] #TODO: only choose one learning rate
+    num_lr = [0.01, 0.001] #TODO: only choose one learning rate
     opt = ["Adagrad", "Adam"]
-    num_reg = [0, 0.1, 0.01, 0.001]
-    num_neg_samp = [1, 50, 100, 200]
+    num_reg = [0, 0.1, 0.01]
+    num_neg_samp = [1, 50, 100]
     ds = ["ICEWS05-15"] #, "ICEWS14"]
-    rank = [10, 50, 100, 500, 1000] # rank 100 first
-    batch_size = [100, 1000]
+    rank = [10, 50, 100, 1000] # rank 100 first
+    batch_size = [1000]
 
     parameter_combinations = list(
         itertools.product(models, num_lr, opt, num_reg, num_neg_samp,
