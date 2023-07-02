@@ -394,8 +394,8 @@ if __name__ == "__main__":
     opt = ["Adagrad", "Adam"]
     num_reg = [0, 0.1, 0.01]
     num_neg_samp = [1, 50, 100]
-    ds = ["ICEWS05-15"] #, "ICEWS14"]
-    rank = [10, 50, 100, 1000] # rank 100 first
+    ds = ["ICEWS14"]
+    rank = [10, 50, 100] # rank 100 first
     batch_size = [1000]
 
     parameter_combinations = list(

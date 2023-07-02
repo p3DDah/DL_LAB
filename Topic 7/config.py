@@ -48,7 +48,7 @@ def configurations():
         "--plt_hits1", default=True, type=bool, choices=[True, False], help="create hits1 plots"
     )
     parser.add_argument(
-        "--dataset", default="ICEWS05-15", choices=["ICEWS05-15", "ICEWS14"],
+        "--dataset", default="ICEWS14", choices=["ICEWS05-15", "ICEWS14"],
         help="Temporal Knowledge Graph Dataset"
     )
     parser.add_argument(
@@ -67,7 +67,7 @@ def configurations():
         "--max_epochs", default=1000, type=int, help="Maximum number of epochs to train for"
     )
     parser.add_argument(
-        "--patience", default=5, type=int, help="Number of epochs before early stopping"
+        "--patience", default=3, type=int, help="Number of epochs before early stopping"
     )
     parser.add_argument(
         "--dyn_lr", default=False, type=bool, help="Adjust the learning rate"
@@ -76,7 +76,7 @@ def configurations():
         "--valid", default=1, type=int, help="Number of epochs before validation"
     )
     parser.add_argument(
-        "--valid_batch", default=1, type=int, help= "Number of validation batches"
+        "--valid_batch", default=20, type=int, help= "Number of validation batches"
     )
     parser.add_argument(
         "--rank", default=100, type=int, help="Embedding dimension"
