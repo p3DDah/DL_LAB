@@ -394,9 +394,9 @@ if __name__ == "__main__":
     opt = ["Adagrad", "Adam"]
     num_reg = [0, 0.1, 0.01]
     num_neg_samp = [1, 50, 100]
-    ds = ["ICEWS14"]
+    ds = ["ICEWS05-15"]
     rank = [10, 50, 100] # rank 100 first
-    batch_size = [1000]
+    batch_size = [100]
 
     parameter_combinations = list(
         itertools.product(models, num_lr, opt, num_reg, num_neg_samp,

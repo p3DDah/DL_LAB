@@ -76,7 +76,7 @@ def configurations():
         "--valid", default=1, type=int, help="Number of epochs before validation"
     )
     parser.add_argument(
-        "--valid_batch", default=20, type=int, help= "Number of validation batches"
+        "--valid_batch", default=10, type=int, help= "Number of validation batches"
     )
     parser.add_argument(
         "--rank", default=100, type=int, help="Embedding dimension"
